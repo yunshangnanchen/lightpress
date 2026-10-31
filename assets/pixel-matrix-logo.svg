@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 1280" role="img" aria-labelledby="title desc">
+  <title id="title">Pixel Matrix</title>
+  <desc id="desc">A 3 by 3 teal pixel grid framed by two opposing dark geometric corners.</desc>
+  <g fill="#333333">
+    <path d="M755 291H988V600H911V368H755Z"/>
+    <path d="M291 679H368V911H523V988H291Z"/>
+  </g>
+  <g fill="#076F8C">
+    <rect x="445" y="447" width="77" height="77"/>
+    <rect x="601" y="447" width="77" height="77"/>
+    <rect x="758" y="447" width="77" height="77"/>
+    <rect x="445" y="602" width="77" height="76"/>
+    <rect x="601" y="601" width="77" height="77"/>
+    <rect x="758" y="602" width="77" height="76"/>
+    <rect x="445" y="756" width="77" height="76"/>
+    <rect x="601" y="756" width="77" height="76"/>
+    <rect x="758" y="756" width="77" height="76"/>
+  </g>
+</svg>

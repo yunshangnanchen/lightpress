@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
+
+# Installed dependencies / local test sandboxes
+.deps/
+.test-run/
+venv/
+.venv/
+
+# App state and logs (local only)
+settings.json
+*.log
+
+# Generated output folders
+*_web/
+压缩*/
+压缩_*/
+
+# Secrets / local environment
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+api-key*
+secrets.json
+credentials*
+*.tmp
+
+# OS / editors
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
