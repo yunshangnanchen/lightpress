@@ -1,0 +1,175 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Byte-compile
+        run: python -m py_compile app.py app_window.py material.py theme.py screenshot.py compress.py compressor/core.py
+
+      - name: Core tests
+        run: python tests/test_core.py
+
+  windows:
+    name: windows (onedir + Inno Setup)
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Resolve version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -like "refs/tags/v*") {
+            $version = $env:GITHUB_REF_NAME.TrimStart("v")
+          } else {
+            # 非 tag 构建用可比较的占位版本，避免 Inno Setup 版本号告警
+            $version = "0.0.$env:GITHUB_RUN_NUMBER"
+          }
+          "APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "version = $version"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Build onedir (PyInstaller)
+        run: python -m PyInstaller --noconfirm --clean LightPress.spec
+
+      - name: Verify PyInstaller output
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "dist/LightPress/LightPress.exe")) {
+            throw "PyInstaller output missing: dist/LightPress/LightPress.exe"
+          }
+          Get-ChildItem "dist/LightPress" | Select-Object Name, Length
+
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+          }
+          if (-not $iscc) { throw "ISCC.exe not found" }
+          & $iscc "/DMyAppVersion=$env:APP_VERSION" "installer\lightpress.iss"
+          if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE"
+          }
+
+      - name: Build portable zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "dist\LightPress" `
+            -DestinationPath "LightPress-$env:APP_VERSION-windows-portable.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-package
+          path: |
+            dist/installer/*.exe
+            LightPress-*-windows-portable.zip
+          if-no-files-found: error
+
+  linux:
+    name: linux (onedir + tar.gz)
+    needs: test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Tk runtime for the build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk
+
+      - name: Resolve version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "APP_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "APP_VERSION=0.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Build onedir (PyInstaller)
+        run: python -m PyInstaller --noconfirm --clean LightPress.spec
+
+      - name: Package tar.gz
+        run: |
+          cp packaging/linux/launch.sh packaging/linux/INSTALL.txt dist/LightPress/
+          chmod +x dist/LightPress/LightPress dist/LightPress/launch.sh
+          tar -czf "LightPress-${APP_VERSION}-linux-x86_64.tar.gz" -C dist LightPress
+          ls -lh ./*.tar.gz
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-package
+          path: "LightPress-*-linux-x86_64.tar.gz"
+          if-no-files-found: error
+
+  release:
+    name: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List release files
+        run: find artifacts -type f
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            artifacts/windows-package/*.exe
+            artifacts/windows-package/*.zip
+            artifacts/linux-package/*.tar.gz

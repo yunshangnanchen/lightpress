@@ -1,0 +1,19 @@
+轻压 · Linux 版说明
+====================
+
+1. 解压后进入目录，运行：
+      ./launch.sh
+   （如果没有执行权限：chmod +x launch.sh）
+
+2. 依赖：系统需要 Tk 运行库（多数桌面发行版已自带）：
+      Debian/Ubuntu:  sudo apt install python3-tk
+      Fedora:         sudo dnf install python3-tkinter
+
+3. 已知限制：
+   - 拖拽功能只随 Windows 版附带，Linux 版请点击虚线区域选择文件夹。
+   - 首次启动会跟随系统深浅色；右下角圆形按钮可切换并记住选择。
+   - 若界面中文显示为方块，请安装中文字体（如 fonts-noto-cjk）。
+
+4. 命令行版本：
+      ./LightPress --help   # 仅图形界面，无命令行参数
+   需要命令行批量压缩时，请使用源码目录中的 compress.py。

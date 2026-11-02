@@ -21,6 +21,15 @@ settings.json
 压缩*/
 压缩_*/
 
+# AI 工具 / 代理的本地状态（不要提交）
+.dsh/
+.claude/
+.cursor/
+.aider*
+.continue/
+.specstory/
+_shots*/
+
 # Secrets / local environment
 .env
 .env.*
